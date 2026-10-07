@@ -1,0 +1,223 @@
+/* ============================================================
+   전체 초기화
+   ============================================================ */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html, body {
+  width: 100%;
+  height: 100%;
+  background-color: #dcdcdc; /* 캔버스 바깥 여백 색상 (원하는 색으로 수정 가능) */
+  font-family: "Malgun Gothic", "Apple SD Gothic Neo", sans-serif;
+}
+
+
+/* =========================
+   쉽게 수정하는 디자인 설정
+   (아래 숫자들은 원본 디자인 1080 x 1440px 기준으로
+    미리 계산해 둔 "퍼센트(%)" 좌표입니다.
+    나중에 위치나 크기를 바꾸고 싶다면 이 숫자들만 수정하면 됩니다.
+
+    계산 방법:
+      가로 위치(%) = (원본 X좌표 / 1080) * 100
+      세로 위치(%) = (원본 Y좌표 / 1440)   * 100
+      가로 크기(%) = (원본 Width  / 1080) * 100
+      세로 크기(%) = (원본 Height / 1440)   * 100
+   ========================= */
+
+:root {
+  /* ---- 업로드 이미지 프레임 위치/크기
+     (원본 좌표: 왼쪽 위(0,0) 기준 X132.2 Y220.5 W816 H815.2) ---- */
+  --upload-left:   12.2407%;
+  --upload-top:    15.3125%;
+  --upload-width:  75.5556%;
+  --upload-height: 56.6111%;
+
+  /* ---- 도장(여자/남자 공통) 위치/크기
+     (원본 좌표: 왼쪽 위(0,0) 기준 X640.2 Y961.6 W369 H373.4) ---- */
+  --stamp-left:   59.2778%;
+  --stamp-top:    66.7778%;
+  --stamp-width:  34.1667%;
+  --stamp-height: 25.9306%;
+}
+
+
+/* ============================================================
+   캔버스 전체 반응형 처리
+   ============================================================ */
+#canvas-wrapper {
+  width: 100%;
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px 0 140px 0; /* 아래쪽은 하단 컨트롤 버튼 공간 확보 */
+}
+
+#canvas {
+  position: relative;
+  width: 100%;
+  max-width: 700px; /* 캔버스 최대 크기 (원하는 만큼 늘리거나 줄여도 됨) */
+
+  /* 원본 디자인 비율(2821.3 : 2607)을 그대로 유지시켜주는 부분.
+     이 비율 덕분에 화면 크기가 바뀌어도 세로/가로 비율이 절대 깨지지 않는다. */
+  aspect-ratio: 1080 / 1440;
+
+  overflow: hidden;
+  background-color: #ffffff;
+}
+
+
+/* ============================================================
+   1) 배경 이미지 (가장 아래 레이어)
+   ============================================================ */
+#background-image {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 1; /* ---- 레이어 순서: 배경이 가장 아래 ---- */
+  object-fit: cover;
+  pointer-events: none; /* 배경은 클릭되지 않도록 처리 */
+}
+
+
+/* ============================================================
+   2) 업로드 이미지 프레임
+   ============================================================ */
+#upload-frame {
+  position: absolute;
+
+  /* ---- 업로드 이미지의 "위치"를 바꾸고 싶다면 이 두 줄을 수정 ---- */
+  left: var(--upload-left);
+  top: var(--upload-top);
+
+  /* ---- 업로드 이미지의 "크기"를 바꾸고 싶다면 이 두 줄을 수정 ---- */
+  width: var(--upload-width);
+  height: var(--upload-height);
+
+  overflow: hidden; /* 프레임 밖으로 이미지가 삐져나오지 않도록 잘라낸다 */
+  z-index: 2; /* ---- 레이어 순서: 배경보다 위, 도장보다 아래 ---- */
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: #f2f2f2; /* 이미지가 없을 때 보이는 배경색 */
+}
+
+/* 업로드된 실제 이미지 태그.
+   object-fit: cover 가 적용되는 핵심 부분:
+   - 이미지의 원본 비율은 유지한 채, 프레임을 빈틈없이 꽉 채운다.
+   - 비율이 다른 이미지는 위아래 또는 좌우 일부가 잘려서 채워진다. */
+#uploaded-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover; /* <-- 바로 이 속성이 "꽉 채우기 + 비율유지 + 잘림 허용"을 담당 */
+  object-position: center; /* 이미지의 중앙 부분을 기준으로 잘라서 보여준다 */
+}
+
+/* 이미지를 아직 업로드하지 않았을 때 보여줄 안내 문구 */
+#upload-placeholder {
+  color: #999999;
+  font-size: 4vw;
+  max-width: 90%;
+  text-align: center;
+  pointer-events: none;
+}
+
+
+/* ============================================================
+   3) 도장 영역 (여자 도장 / 남자 도장 공통 위치)
+   ============================================================
+   (이번 프로젝트는 테이프가 없으므로 업로드 이미지 바로 위가 도장이다) */
+#stamp-frame {
+  position: absolute;
+
+  /* ---- 도장의 위치를 바꾸고 싶다면 이 두 줄을 수정 ---- */
+  left: var(--stamp-left);
+  top: var(--stamp-top);
+
+  /* ---- 도장의 크기를 바꾸고 싶다면 이 두 줄을 수정 ---- */
+  width: var(--stamp-width);
+  height: var(--stamp-height);
+
+  z-index: 3; /* ---- 레이어 순서: 가장 위에 표시되어야 함 ---- */
+  pointer-events: none;
+}
+
+#stamp-image {
+  width: 100%;
+  height: 100%;
+  object-fit: contain; /* 도장 이미지 비율을 유지하며 프레임 안에 표시 */
+}
+
+
+/* ============================================================
+   하단 컨트롤 버튼 영역
+   ============================================================ */
+#controls {
+  position: fixed;
+  left: 0;
+  bottom: 0;
+  width: 100%;
+  padding: 16px 12px;
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+  align-items: center;
+  background-color: rgba(255, 255, 255, 0.92);
+  box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.1);
+  z-index: 100; /* 버튼은 캔버스보다 항상 위에 보여야 하므로 높은 z-index 사용 */
+  flex-wrap: wrap;
+}
+
+.btn {
+  padding: 12px 20px;
+  border: none;
+  border-radius: 8px;
+  font-size: 15px;
+  font-weight: bold;
+  cursor: pointer;
+  color: #ffffff;
+  text-align: center;
+  transition: opacity 0.15s ease;
+}
+
+.btn:hover {
+  opacity: 0.85;
+}
+
+.btn-upload {
+  background-color: #555555;
+}
+
+.btn-female {
+  background-color: #ff6fa5; /* 여자 도장 버튼 색상 */
+}
+
+.btn-male {
+  background-color: #4a90e2; /* 남자 도장 버튼 색상 */
+}
+
+.btn-download {
+  background-color: #2e7d32; /* 다운로드 버튼 색상 */
+}
+
+
+/* ============================================================
+   모바일 화면 대응
+   ============================================================ */
+@media (max-width: 480px) {
+  .btn {
+    padding: 10px 14px;
+    font-size: 13px;
+  }
+
+  #canvas-wrapper {
+    padding-bottom: 110px;
+  }
+}
